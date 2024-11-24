@@ -2,8 +2,8 @@ import java.util.ArrayList;
 import java.util.regex.Pattern;
 
 public class InternalCalculator {
-    private final Pattern isNumberPattern = Pattern.compile("[0-9]*", Pattern.CASE_INSENSITIVE);
-    private final Pattern isDecimalPattern = Pattern.compile("[0-9]+.[0-9]*", Pattern.CASE_INSENSITIVE);
+    private final Pattern isNumberPattern = Pattern.compile("-?[0-9]", Pattern.CASE_INSENSITIVE);
+    private final Pattern isDecimalPattern = Pattern.compile("-?[0-9]+.[0-9]*", Pattern.CASE_INSENSITIVE);
     private final Pattern MDPattern = Pattern.compile("[*/%]");
     private final Pattern ASPattern = Pattern.compile("[+-]");
     private final ArrayList<String> calc;
@@ -29,15 +29,20 @@ public class InternalCalculator {
     }
 
     public void input(String thing) {
-        if (calc.isEmpty() && isNumber(thing)) {// first thing should be a number
-            calc.add(thing);
-        } else if (isNumber(thing) || thing.equals(".")){ // Thing to add is a number
+        if (calc.isEmpty() && (isNumber(thing) || thing.equals("."))) {// first thing should be a number
+            if (thing.equals(".")) {
+                calc.add("0" + thing);
+            } else {
+                calc.add(thing);
+            }
+        } else if (isNumber(thing) || thing.equals(".")){ // Thing to add is a number or a dot
+            if (isDecimal(calc.getLast()) && thing.equals(".")) return; // If the last number has a dot and thing to add is a dot, do nothing.
             if (isNumber(calc.getLast()) && (isNumber(thing) || thing.equals("."))) { // Last thing is a number without a decimal point
                 calc.set(calc.size()-1, calc.getLast().concat(thing));
             } else if (isDecimal(calc.getLast()) && isNumber(thing)) { // Last thing is a decimal number
                 calc.set(calc.size()-1, calc.getLast().concat(thing));
-            } else if (isDecimal(calc.getLast()) && thing.equals(".")){ // Last thing is a decimal and input thing is a dot
-                return;
+            } else if ((getMD(calc.getLast()) || getAS(calc.getLast())) && thing.equals(".")) { // Last thing is an action and thing to add is a decimal.
+                calc.add("0" + thing);
             } else {
                 calc.add(thing);
             }
@@ -60,7 +65,7 @@ public class InternalCalculator {
 
     public void total() {
         int total = calc.size();
-        while (total > 1) {
+        while (total > 2) {
             for (int i = 0; i < total-1; i++) {
                 if (getMD(calc.get(i+1))) {
                     float num1 = Float.parseFloat(calc.get(i));
@@ -96,6 +101,7 @@ public class InternalCalculator {
 
     public String toString() {
         StringBuilder s = new StringBuilder();
+        s.append(" ");
         for (String i : calc){
             s.append(i);
             s.append(" ");
